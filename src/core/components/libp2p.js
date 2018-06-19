@@ -15,27 +15,33 @@ module.exports = function libp2p (self) {
           return callback(err)
         }
 
-        const options = {
-          mdns: get(config, 'Discovery.MDNS.Enabled'),
-          webRTCStar: get(config, 'Discovery.webRTCStar.Enabled'),
-          bootstrap: get(config, 'Bootstrap'),
+        const libp2pOptions = {
+          peerInfo: self._peerInfo,
+          peerBook: self._peerInfoBook,
           modules: self._libp2pModules,
-          // EXPERIMENTAL
-          pubsub: get(self._options, 'EXPERIMENTAL.pubsub', false),
-          dht: get(self._options, 'EXPERIMENTAL.dht', false),
-          relay: {
-            enabled: get(self._options, 'EXPERIMENTAL.relay.enabled',
-              get(config, 'EXPERIMENTAL.relay.enabled', false)),
-            hop: {
-              enabled: get(self._options, 'EXPERIMENTAL.relay.hop.enabled',
-                get(config, 'EXPERIMENTAL.relay.hop.enabled', false)),
-              active: get(self._options, 'EXPERIMENTAL.relay.hop.active',
-                get(config, 'EXPERIMENTAL.relay.hop.active', false))
+          config: {
+            mdns: get(config, 'Discovery.MDNS.Enabled'),
+            webRTCStar: get(config, 'Discovery.webRTCStar.Enabled'),
+            bootstrap: get(config, 'Bootstrap')
+          },
+          EXPERIMENTAL: {
+            // TODO move all of this to the config!
+            pubsub: get(self._options, 'EXPERIMENTAL.pubsub', false),
+            dht: get(self._options, 'EXPERIMENTAL.dht', false),
+            relay: {
+              enabled: get(self._options, 'EXPERIMENTAL.relay.enabled',
+                get(config, 'EXPERIMENTAL.relay.enabled', false)),
+              hop: {
+                enabled: get(self._options, 'EXPERIMENTAL.relay.hop.enabled',
+                  get(config, 'EXPERIMENTAL.relay.hop.enabled', false)),
+                active: get(self._options, 'EXPERIMENTAL.relay.hop.active',
+                  get(config, 'EXPERIMENTAL.relay.hop.active', false))
+              }
             }
           }
         }
 
-        self._libp2pNode = new Node(self._peerInfo, self._peerInfoBook, options)
+        self._libp2pNode = new Node(libp2pOptions)
 
         self._libp2pNode.on('peer:discovery', (peerInfo) => {
           const dial = () => {
