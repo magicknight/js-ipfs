@@ -31,4 +31,12 @@ module.exports = (server) => {
       handler: resources.bitswap.unwant.handler
     }
   })
+
+  api.route({
+    method: '*',
+    path: '/api/v0/bitswap/ledger',
+    config: {
+      handler: resources.bitswap.ledger.handler
+    }
+  })
 }

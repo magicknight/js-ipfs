@@ -2,45 +2,87 @@
 'use strict'
 
 const expect = require('chai').expect
-const runOn = require('../utils/on-and-off').on
-const PeerId = require('peer-id')
+const parallel = require('async/parallel')
+const waterfall = require('async/waterfall')
+const DaemonFactory = require('ipfsd-ctl')
+const df = DaemonFactory.create()
+const ipfsExec = require('../utils/ipfs-exec')
+const clean = require('../utils/clean')
 
-describe('bitswap', () => runOn((thing) => {
-  let ipfs
-  let peerId
+describe('bitswap', () => {
+  let ipfsA
+  let ipfsB
+  let ipfsdA
+  let ipfsdB
+  let ipfsBId
   const key = 'QmUBdnXXPyoDFXj3Hj39dNJ5VkN3QFRskXxcGaYFBB8CNR'
 
   before(function (done) {
     this.timeout(60 * 1000)
-    ipfs = thing.ipfs
-    ipfs('block get ' + key)
-      .then(() => {})
-      .catch(() => {})
-    PeerId.create((err, peer) => {
+    parallel([
+      (cb) => df.spawn({
+          type: 'js',
+          exec: `./src/cli/bin.js`,
+          initOptions: { bits: 512 }
+        }, (err, node) => {
+          expect(err).to.not.exist()
+          ipfsdA = node
+          ipfsA = ipfsExec(node.repoPath)
+          ipfsA.repoPath = node.repoPath
+          cb()
+        }),
+      (cb) => waterfall([
+        (wcb) => df.spawn({
+          type: 'js',
+          exec: `./src/cli/bin.js`,
+          initOptions: { bits: 512 }
+        }, (wcb)),
+        (node, wcb) => {
+          ipfsdB = node
+          ipfsB = ipfsExec(node.repoPath)
+          ipfsB.repoPath = node.repoPath
+          ipfsB('id').then((res) => {
+            ipfsBId = JSON.parse(res)
+            wcb()
+          })
+        }
+      ], cb)
+    ], (err) => {
       expect(err).to.not.exist()
-      peerId = peer.toB58String()
-      done()
+      ipfsB('block get ' + key)
+        .then(() => {})
+        .catch(() => {})
+      ipfsA('swarm connect ' + ipfsBId.addresses[0]).then((out) => {
+        done()
+      })
     })
+  })
+
+  after(function (done) {
+    this.timeout(20 * 1000)
+    clean(ipfsA.repoPath)
+    clean(ipfsB.repoPath)
+    setImmediate(done)
   })
 
   it('wantlist', function () {
     this.timeout(20 * 1000)
-    return ipfs('bitswap wantlist').then((out) => {
+    return ipfsB('bitswap wantlist').then((out) => {
       expect(out).to.eql(key + '\n')
     })
   })
 
   it('wantlist peerid', function () {
     this.timeout(20 * 1000)
-    return ipfs('bitswap wantlist ' + peerId).then((out) => {
-      expect(out).to.eql('')
+    return ipfsA('bitswap wantlist ' + ipfsBId.id).then((out) => {
+      expect(out).to.eql(key + '\n')
     })
   })
 
   it('stat', function () {
     this.timeout(20 * 1000)
 
-    return ipfs('bitswap stat').then((out) => {
+    return ipfsB('bitswap stat').then((out) => {
       expect(out).to.be.eql([
         'bitswap status',
         '  blocks received: 0',
@@ -55,8 +97,14 @@ describe('bitswap', () => runOn((thing) => {
   })
 
   it('unwant', function () {
-    return ipfs('bitswap unwant ' + key).then((out) => {
+    return ipfsB('bitswap unwant ' + key).then((out) => {
       expect(out).to.eql(`Key ${key} removed from wantlist\n`)
     })
   })
-}))
+
+  it('ledger', function () {
+    return ipfsA('bitswap ledger ' + ipfsBId.id).then((out) => {
+      expect(out).to.eql('')
+    })
+  })
+})

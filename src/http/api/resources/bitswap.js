@@ -3,6 +3,7 @@
 const boom = require('boom')
 
 const parseKey = require('./block').parseKey
+const PeerId = require('peer-id')
 
 exports = module.exports
 
@@ -58,6 +59,25 @@ exports.unwant = {
         return reply(boom.badRequest(err))
       }
       reply({ key: key.toBaseEncodedString() })
+    })
+  }
+}
+
+exports.ledger = {
+
+  handler: (request, reply) => {
+
+    const ipfs = request.server.app.ipfs
+    ipfs.bitswap.ledger(request.query.arg, (err, ledger) => {
+
+      if(err) {
+        return reply({
+          Message: err.toString(),
+          Code: 0
+        }).code(500)
+      }
+
+      reply(ledger)
     })
   }
 }

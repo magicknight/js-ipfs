@@ -76,6 +76,28 @@ module.exports = function bitswap (self) {
         return new CID(key)
       })
       return setImmediate(() => callback(null, self._bitswap.unwant(keys)))
+    }),
+
+    ledger: promisify((peerId, callback) => {
+      if (!self.isOnline()) {
+        return setImmediate(() => callback(new Error(OFFLINE_ERROR)))
+      }
+      peerId = PeerId.createFromB58String(peerId)
+
+      const ledger = self._bitswap.ledgerForPeer(peerId)
+      if (!ledger) {
+        return callback(null, null)
+      }
+
+      // It's a little clunky having to reinstantiate this peer every time, ipfs-bitswap should just use toString
+      peerId = PeerId.createFromB58String(ledger.peer)
+      callback(null, {
+        Peer: peerId.toPrint(),
+        Value: new Big(ledger.value),
+        Sent: new Big(ledger.sent),
+        Recv: new Big(ledger.recv),
+        Exchanged: new Big(ledger.exchanged)
+      })
     })
   }
 }
