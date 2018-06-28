@@ -4,6 +4,7 @@
 const Node = require('../runtime/libp2p-nodejs')
 const promisify = require('promisify-es6')
 const get = require('lodash.get')
+const defaultsDeep = require('lodash.defaultsdeep')
 
 module.exports = function libp2p (self) {
   return {
@@ -15,10 +16,9 @@ module.exports = function libp2p (self) {
           return callback(err)
         }
 
-        const libp2pOptions = {
+        const libp2pDefaults = {
           peerInfo: self._peerInfo,
           peerBook: self._peerInfoBook,
-          modules: self._libp2pModules,
           config: {
             peerDiscovery: {
               mdns: {
@@ -50,6 +50,11 @@ module.exports = function libp2p (self) {
             }
           }
         }
+
+        const libp2pOptions = defaultsDeep(
+          get(self._options, 'libp2p', {}),
+          libp2pDefaults
+        )
 
         self._libp2pNode = new Node(libp2pOptions)
 
