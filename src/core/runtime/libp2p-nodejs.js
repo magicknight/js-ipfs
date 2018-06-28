@@ -14,13 +14,13 @@ const defaultsDeep = require('lodash.defaultsdeep')
 class Node extends libp2p {
   constructor (_options) {
     const wsstar = new WebSocketStar({id: _options.peerInfo.id})
-    const mdns = new MulticastDNS(_options.peerInfo, 'ipfs.local')
 
     const defaults = {
       modules: {
         transport: [
           TCP,
-          WS
+          WS,
+          wsstar
         ],
         streamMuxer: [
           Multiplex
@@ -30,36 +30,34 @@ class Node extends libp2p {
         ],
         peerDiscovery: [
           MulticastDNS,
-          Bootstrap
+          Bootstrap,
+          wsstar.discovery
         ],
-        peerRouting: [],
-        contentRouting: [],
         dht: KadDHT
       },
       config: {
         peerDiscovery: {
+          mdns: {
+            enabled: true
+          },
           bootstrap: {
-            list: _options.bootstrapList
+            enabled: true
+          },
+          websocketStar: {
+            enabled: true
           }
         },
-        peerRouting: {},
-        contentRouting: {},
         dht: {
           kBucketSize: 20
+        },
+        EXPERIMENTAL: {
+          dht: false,
+          pubsub: false
         }
-      },
-      EXPERIMENTAL: {
-        dht: false,
-        pubsub: false
       }
     }
 
     defaultsDeep(_options, defaults)
-
-    _options.modules.transport.push(wsstar)
-    _options.modules.peerDiscovery.push(wsstar)
-    _options.modules.peerDiscovery.push(mdns)
-
     super(_options)
   }
 }

@@ -20,14 +20,20 @@ module.exports = function libp2p (self) {
           peerBook: self._peerInfoBook,
           modules: self._libp2pModules,
           config: {
-            mdns: get(config, 'Discovery.MDNS.Enabled'),
-            webRTCStar: get(config, 'Discovery.webRTCStar.Enabled'),
-            bootstrap: get(config, 'Bootstrap')
-          },
-          EXPERIMENTAL: {
-            // TODO move all of this to the config!
-            pubsub: get(self._options, 'EXPERIMENTAL.pubsub', false),
-            dht: get(self._options, 'EXPERIMENTAL.dht', false),
+            peerDiscovery: {
+              mdns: {
+                enabled: get(self._options, 'config.Discovery.MDNS.Enabled',
+                  get(config, 'Discovery.MDNS.Enabled', true))
+              },
+              webRTCStar: {
+                enabled: get(self._options, 'config.Discovery.webRTCStar.Enabled',
+                  get(config, 'Discovery.webRTCStar.Enabled', true))
+              },
+              bootstrap: {
+                list: get(self._options, 'config.Bootstrap',
+                  get(config, 'Bootstrap', []))
+              }
+            },
             relay: {
               enabled: get(self._options, 'EXPERIMENTAL.relay.enabled',
                 get(config, 'EXPERIMENTAL.relay.enabled', false)),
@@ -37,6 +43,10 @@ module.exports = function libp2p (self) {
                 active: get(self._options, 'EXPERIMENTAL.relay.hop.active',
                   get(config, 'EXPERIMENTAL.relay.hop.active', false))
               }
+            },
+            EXPERIMENTAL: {
+              dht: get(self._options, 'EXPERIMENTAL.dht', false),
+              pubsub: get(self._options, 'EXPERIMENTAL.pubsub', false)
             }
           }
         }
